@@ -10,13 +10,8 @@ st.set_page_config(page_title="Analytics Jeopardy", layout="wide", initial_sideb
 st.markdown("""
 <style>
 * { box-sizing: border-box; }
-
-[data-testid="stAppViewContainer"] {
-    background-color: #f5f0eb;
-}
-[data-testid="stHeader"] {
-    background-color: #241a10;
-}
+[data-testid="stAppViewContainer"] { background-color: #f5f0eb; }
+[data-testid="stHeader"] { background-color: #241a10; }
 [data-testid="stMainBlockContainer"] {
     max-width: 100% !important;
     padding-left: 2rem !important;
@@ -27,9 +22,7 @@ st.markdown("""
     width: 240px !important;
     min-width: 240px !important;
 }
-[data-testid="stSidebarCollapsedControl"] {
-    display: none !important;
-}
+[data-testid="stSidebarCollapsedControl"] { display: none !important; }
 [data-testid="stSidebar"] * { color: #edf5e6 !important; }
 [data-testid="stSidebar"] input {
     background-color: #241a10 !important;
@@ -42,11 +35,10 @@ st.markdown("""
     border: none !important;
     width: 100%;
 }
-[data-testid="stSidebar"] .stButton button:hover {
-    background-color: #4a6038 !important;
-}
+[data-testid="stSidebar"] .stButton button:hover { background-color: #4a6038 !important; }
 h1, h2, h3 { color: #241a10 !important; }
 h1 a, h2 a, h3 a { display: none !important; }
+p, label { color: #3d2e18 !important; }
 hr { border-color: #e8c4a0 !important; margin: 16px 0 !important; }
 
 .section-label {
@@ -58,14 +50,27 @@ hr { border-color: #e8c4a0 !important; margin: 16px 0 !important; }
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px; margin-bottom: 20px;
 }
-.score-card {
-    background: #3d2e18; border-radius: 10px; padding: 12px 14px;
-}
+.score-card { background: #3d2e18; border-radius: 10px; padding: 12px 14px; }
 .score-card.leader { border: 2px solid #b85c38; }
 .score-name { font-size: 11px; color: #b8d4a8; margin-bottom: 4px; }
 .score-val { font-size: 24px; font-weight: 600; color: #edf5e6; }
 .leader-tag { font-size: 9px; color: #b85c38; font-weight: 600; margin-left: 4px; }
 
+.question-card {
+    background: #3d2e18; border-radius: 12px;
+    padding: 24px 28px; margin-bottom: 16px;
+    border-left: 4px solid #b85c38;
+}
+.question-category {
+    font-size: 10px; color: #b8d4a8; font-weight: 600;
+    letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px;
+}
+.question-value {
+    font-size: 12px; color: #b85c38; font-weight: 600; margin-bottom: 12px;
+}
+.question-text {
+    font-size: 18px; color: #edf5e6; font-weight: 500; line-height: 1.5;
+}
 .answer-banner {
     background: #fdeae0; border: 1.5px solid #e8a880;
     border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
@@ -86,7 +91,11 @@ hr { border-color: #e8c4a0 !important; margin: 16px 0 !important; }
     font-size: 14px; color: #5a3a20; font-weight: 500;
 }
 .buzzer-highlight { color: #8b2040; font-weight: 600; }
-
+.waiting-state {
+    background: #f0ebe4; border: 1.5px solid #e8c4a0;
+    border-radius: 12px; padding: 20px; text-align: center;
+    color: #8b6a50; font-size: 14px; margin-bottom: 16px;
+}
 .board-wrap {
     background: #f5f0eb; border-radius: 14px;
     padding: 20px; margin-top: 8px;
@@ -103,9 +112,6 @@ hr { border-color: #e8c4a0 !important; margin: 16px 0 !important; }
     display: flex; align-items: center; justify-content: center;
     width: 100%;
 }
-div[data-testid="stVerticalBlock"] {
-    width: 100% !important;
-}
 div[data-testid="stButton"] button {
     background-color: #b8d4a8 !important; color: #241a10 !important;
     border: none !important; font-size: 18px !important;
@@ -113,14 +119,37 @@ div[data-testid="stButton"] button {
     border-radius: 8px !important; width: 100% !important;
     margin-bottom: 6px !important; transition: background-color 0.2s !important;
 }
-div[data-testid="stButton"] button:hover { background-color: #4a6038 !important; }
+div[data-testid="stButton"] button:hover { background-color: #a0c090 !important; }
 div[data-testid="stButton"] button:disabled {
-    background-color: #2d3d24 !important; color: #4a6038 !important;
+    background-color: #d8e8d0 !important; color: #8aaa80 !important;
+}
+div[data-testid="stVerticalBlock"] div[data-testid="stButton"] button {
+    width: 100% !important;
+    min-width: 100% !important;
+}
+div[data-testid="stVerticalBlock"] div[data-testid="stButton"] {
+    width: 100% !important;
+}
+div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button {
+    width: 100% !important;
+    display: block !important;
+}
+[data-testid="stColumn"] {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+}
+[data-testid="stColumn"] > div {
+    width: 100% !important;
 }
 .player-pill {
     display: inline-block; background: #b85c38; color: #fff8f0;
     font-size: 12px; padding: 4px 14px; border-radius: 20px;
     font-weight: 500; margin-bottom: 16px;
+}
+.host-badge {
+    display: inline-block; background: #8b2040; color: #fde8ef;
+    font-size: 12px; padding: 4px 14px; border-radius: 20px;
+    font-weight: 500; margin-bottom: 16px; margin-left: 8px;
 }
 .lobby-outer {
     display: flex; justify-content: center; align-items: center;
@@ -137,6 +166,22 @@ div[data-testid="stButton"] button:disabled {
     .cat-header { font-size: 10px !important; padding: 6px 4px !important; min-height: 36px !important; }
     div[data-testid="stButton"] button { font-size: 13px !important; padding: 10px 0 !important; }
     [data-testid="stMainBlockContainer"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    .question-text { font-size: 15px !important; }
+}
+    [data-testid="stColumn"] {
+    padding: 0 4px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+[data-testid="stColumn"] > div:first-child {
+    width: 100% !important;
+}
+div[data-testid="stButton"] {
+    width: 100% !important;
+}
+div[data-testid="stButton"] > button {
+    width: 100% !important;
+    min-width: 0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -163,15 +208,20 @@ def get_sheet(tab_name):
     return get_spreadsheet().worksheet(tab_name)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
-def get_players():
+@st.cache_data(ttl=5)
+def get_players_cached():
     ws = get_sheet("Players")
     return ws.get_all_records()
+
+def get_players():
+    return get_players_cached()
 
 def add_or_get_player(name):
     ws = get_sheet("Players")
     records = ws.get_all_records()
     if name not in [r["name"] for r in records]:
         ws.append_row([name, 0])
+    get_players_cached.clear()
 
 def update_score(name, delta):
     ws = get_sheet("Players")
@@ -180,14 +230,15 @@ def update_score(name, delta):
         if r["name"] == name:
             ws.update_cell(i + 2, 2, r["score"] + delta)
             break
+    get_players_cached.clear()
 
 @st.cache_data(ttl=3)
 def read_game_state_cached():
     try:
         ws = get_sheet("GameState")
         vals = ws.batch_get(["B1", "B2", "B3", "B4"])
-        def safe(vals, idx):
-            try: return vals[idx][0][0]
+        def safe(v, idx):
+            try: return v[idx][0][0]
             except: return ""
         return {
             "active_question_id": safe(vals, 0),
@@ -239,9 +290,13 @@ def buzz_in(player_name, question_id):
     except Exception:
         return False
 
-def get_questions():
+@st.cache_data(ttl=300)
+def get_questions_cached():
     ws = get_sheet("JeopardyContent")
     return ws.get_all_records()
+
+def get_questions():
+    return get_questions_cached()
 
 def mark_question_used(question_id):
     ws = get_sheet("JeopardyContent")
@@ -250,20 +305,20 @@ def mark_question_used(question_id):
         if str(r["id"]) == str(question_id):
             ws.update_cell(i + 2, 6, "TRUE")
             break
+    get_questions_cached.clear()
 
 # ── Session state ──────────────────────────────────────────────────────────────
 if "player_name" not in st.session_state:
     st.session_state.player_name = None
+if "host_pw" not in st.session_state:
+    st.session_state.host_pw = ""
 
 # ── Lobby ──────────────────────────────────────────────────────────────────────
 if st.session_state.player_name is None:
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="stMainBlockContainer"] {
-        max-width: 100% !important;
-        padding: 0 !important;
-    }
+    [data-testid="stMainBlockContainer"] { max-width: 100% !important; padding: 0 !important; }
     </style>
     <div class="lobby-outer">
         <div class="lobby-card">
@@ -284,12 +339,10 @@ if st.session_state.player_name is None:
         st.rerun()
     st.stop()
 
-# ── Load questions ─────────────────────────────────────────────────────────────
-st.session_state.questions = get_questions()
-questions = st.session_state.questions
+# ── Load data ──────────────────────────────────────────────────────────────────
+questions = get_questions()
 player_name = st.session_state.player_name
 
-# ── Board structure ────────────────────────────────────────────────────────────
 categories = {}
 for q in questions:
     cat = q["category"]
@@ -297,12 +350,16 @@ for q in questions:
         categories[cat] = []
     categories[cat].append(q)
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+# ── Host check ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### Host Controls")
     pw = st.text_input("Password", type="password", label_visibility="collapsed",
-                       placeholder="Host password...")
-    is_host = pw == st.secrets["app"]["host_password"]
+                       placeholder="Host password...",
+                       value=st.session_state.host_pw)
+    if pw:
+        st.session_state.host_pw = pw
+    is_host = st.session_state.host_pw == st.secrets["app"]["host_password"]
+
     if is_host:
         st.success("Host mode active")
         if st.button("Reset Buzzer", use_container_width=True):
@@ -310,17 +367,23 @@ with st.sidebar:
             st.success("Buzzer reset!")
         st.divider()
         st.markdown("**Award / Deduct Points**")
-        all_players = get_players()
-        selected_player = st.selectbox("Player", [p["name"] for p in all_players])
-        point_delta = st.number_input("Points", value=100, step=100)
-        if st.button("Apply Points", use_container_width=True):
-            update_score(selected_player, point_delta)
-            st.success(f"{point_delta:+d} pts → {selected_player}")
+        all_players_sidebar = get_players()
+        if all_players_sidebar:
+            selected_player = st.selectbox("Player", [p["name"] for p in all_players_sidebar])
+            point_delta = st.number_input("Points", value=100, step=100)
+            if st.button("Apply Points", use_container_width=True):
+                update_score(selected_player, point_delta)
+                st.success(f"{point_delta:+d} pts → {selected_player}")
         st.divider()
         if st.button("Toggle Reveal Answer", use_container_width=True):
             state = read_game_state()
             write_game_state("show_answer",
                              "FALSE" if state["show_answer"] == "TRUE" else "TRUE")
+        st.divider()
+        if st.button("Clear Active Question", use_container_width=True):
+            write_game_state("active_question_id", "")
+            reset_buzzer()
+            st.success("Question cleared!")
     else:
         st.markdown("<div style='color:#b8d4a8;font-size:12px;'>Enter host password above</div>",
                     unsafe_allow_html=True)
@@ -330,7 +393,8 @@ col_title, col_pill = st.columns([6, 1])
 with col_title:
     st.markdown("# Analytics Jeopardy")
 with col_pill:
-    st.markdown(f'<div class="player-pill">Playing as: {player_name}</div>',
+    badge = '<div class="host-badge">HOST</div>' if is_host else ""
+    st.markdown(f'<div class="player-pill">Playing as: {player_name}</div>{badge}',
                 unsafe_allow_html=True)
 
 # ── Scoreboard ─────────────────────────────────────────────────────────────────
@@ -353,7 +417,7 @@ if all_players:
 
 st.divider()
 
-# ── Buzzer fragment ────────────────────────────────────────────────────────────
+# ── Buzzer + question fragment ─────────────────────────────────────────────────
 @st.fragment(run_every=3)
 def buzzer_display():
     state = read_game_state()
@@ -362,65 +426,80 @@ def buzzer_display():
     show_ans = state["show_answer"] == "TRUE"
     active_q = state["active_question_id"]
 
-    if show_ans and active_q:
-        matching = [q for q in questions if str(q["id"]) == str(active_q)]
-        if matching:
-            q = matching[0]
-            st.markdown(f"""
-            <div class="answer-banner">
-                <div class="answer-label">Answer revealed</div>
-                <div class="answer-text">{q['answer']}
-                    <span class="burgundy-pill">Q{q['id']} · {q['category']} · ${q['value']}</span>
-                </div>
-            </div>""", unsafe_allow_html=True)
+    matching = [q for q in questions if str(q["id"]) == str(active_q)] if active_q else []
+    current_q = matching[0] if matching else None
 
-    if locked and first:
+    # Current question card
+    if current_q:
         st.markdown(f"""
-        <div class="buzzer-area">
-            🔔&nbsp;<span class="buzzer-highlight">{first}</span>&nbsp;buzzed in first!
+        <div class="question-card">
+            <div class="question-category">{current_q['category']}</div>
+            <div class="question-value">{current_q['value']} pts</div>
+            <div class="question-text">{current_q['question']}</div>
         </div>""", unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div class="buzzer-area">
-            Buzzer is open — select a question to activate it.
+        <div class="waiting-state">
+            Waiting for host to select a question...
         </div>""", unsafe_allow_html=True)
 
-    if st.button("🔔  BUZZ IN", use_container_width=True):
-        if not active_q:
-            st.error("No active question — host must select one first.")
-        elif locked:
-            st.error("Too slow — someone already buzzed!")
+    # Answer banner
+    if show_ans and current_q:
+        st.markdown(f"""
+        <div class="answer-banner">
+            <div class="answer-label">Answer revealed</div>
+            <div class="answer-text">{current_q['answer']}
+                <span class="burgundy-pill">{current_q['category']} · {current_q['value']} pts</span>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+    # Buzzer status — only show when a question is active
+    if current_q:
+        if locked and first:
+            st.markdown(f"""
+            <div class="buzzer-area">
+                🔔&nbsp;<span class="buzzer-highlight">{first}</span>&nbsp;buzzed in first!
+            </div>""", unsafe_allow_html=True)
         else:
-            result = buzz_in(player_name, active_q)
-            if result:
-                st.success("You buzzed in first!")
-            else:
+            st.markdown("""
+            <div class="buzzer-area">
+                Buzzer is open!
+            </div>""", unsafe_allow_html=True)
+
+    # Buzz button — players only, not host
+    if not is_host:
+        if st.button("🔔  BUZZ IN", use_container_width=True):
+            if not active_q:
+                st.error("No active question yet — wait for the host.")
+            elif locked:
                 st.error("Too slow — someone already buzzed!")
+            else:
+                result = buzz_in(player_name, active_q)
+                if result:
+                    st.success("You buzzed in first!")
+                else:
+                    st.error("Too slow — someone already buzzed!")
 
 buzzer_display()
 
-st.divider()
+# ── Game board — HOST ONLY ─────────────────────────────────────────────────────
+if is_host:
+    st.divider()
+    st.markdown('<div class="board-label">GAME BOARD</div>', unsafe_allow_html=True)
 
-# ── Game board ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="board-wrap">', unsafe_allow_html=True)
-st.markdown('<div class="board-label">GAME BOARD</div>', unsafe_allow_html=True)
+    cat_names = list(categories.keys())
+    board_cols = st.columns(len(cat_names))
 
-cat_names = list(categories.keys())
-board_cols = st.columns(len(cat_names))
-
-for col_idx, cat in enumerate(cat_names):
-    with board_cols[col_idx]:
-        st.markdown(f'<div class="cat-header">{cat}</div>', unsafe_allow_html=True)
-        for q in sorted(categories[cat], key=lambda x: x["value"]):
-            used = str(q.get("used", "")).upper() == "TRUE"
-            if used:
-                st.button("✓", disabled=True, key=f"q_{q['id']}")
-            else:
-                if st.button(f"{q['value']} pts", key=f"q_{q['id']}"):
-                    write_game_state("active_question_id", str(q["id"]))
-                    reset_buzzer()
-                    mark_question_used(q["id"])
-                    st.session_state.questions = get_questions()
-                    st.rerun()
-
-st.markdown('</div>', unsafe_allow_html=True)
+    for col_idx, cat in enumerate(cat_names):
+        with board_cols[col_idx]:
+            st.markdown(f'<div class="cat-header">{cat}</div>', unsafe_allow_html=True)
+            for q in sorted(categories[cat], key=lambda x: x["value"]):
+                used = str(q.get("used", "")).upper() == "TRUE"
+                if used:
+                    st.markdown('<div style="background:#d8e8d0;color:#8aaa80;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">✓</div>', unsafe_allow_html=True)
+                else:
+                    if st.button(f"{q['value']} pts", key=f"q_{q['id']}", use_container_width=True):
+                        write_game_state("active_question_id", str(q["id"]))
+                        reset_buzzer()
+                        mark_question_used(q["id"])
+                        st.rerun()
