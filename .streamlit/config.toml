@@ -3,5 +3,5 @@ headless = false
 port = 8501
 
 [browser]
-serverAddress = "192.168.1.249"
+serverAddress = "192.168.150.175"
 serverPort = 8501
