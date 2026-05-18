@@ -40,7 +40,6 @@ h1, h2, h3 { color: #241a10 !important; }
 h1 a, h2 a, h3 a { display: none !important; }
 p, label { color: #3d2e18 !important; }
 hr { border-color: #e8c4a0 !important; margin: 16px 0 !important; }
-
 .section-label {
     font-size: 11px; font-weight: 600; color: #8b6a50;
     letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px;
@@ -55,7 +54,6 @@ hr { border-color: #e8c4a0 !important; margin: 16px 0 !important; }
 .score-name { font-size: 11px; color: #b8d4a8; margin-bottom: 4px; }
 .score-val { font-size: 24px; font-weight: 600; color: #edf5e6; }
 .leader-tag { font-size: 9px; color: #b85c38; font-weight: 600; margin-left: 4px; }
-
 .question-card {
     background: #3d2e18; border-radius: 12px;
     padding: 24px 28px; margin-bottom: 16px;
@@ -65,12 +63,8 @@ hr { border-color: #e8c4a0 !important; margin: 16px 0 !important; }
     font-size: 10px; color: #b8d4a8; font-weight: 600;
     letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px;
 }
-.question-value {
-    font-size: 12px; color: #b85c38; font-weight: 600; margin-bottom: 12px;
-}
-.question-text {
-    font-size: 18px; color: #edf5e6; font-weight: 500; line-height: 1.5;
-}
+.question-value { font-size: 12px; color: #b85c38; font-weight: 600; margin-bottom: 12px; }
+.question-text { font-size: 18px; color: #edf5e6; font-weight: 500; line-height: 1.5; }
 .answer-banner {
     background: #fdeae0; border: 1.5px solid #e8a880;
     border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
@@ -123,24 +117,6 @@ div[data-testid="stButton"] button:hover { background-color: #a0c090 !important;
 div[data-testid="stButton"] button:disabled {
     background-color: #d8e8d0 !important; color: #8aaa80 !important;
 }
-div[data-testid="stVerticalBlock"] div[data-testid="stButton"] button {
-    width: 100% !important;
-    min-width: 100% !important;
-}
-div[data-testid="stVerticalBlock"] div[data-testid="stButton"] {
-    width: 100% !important;
-}
-div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button {
-    width: 100% !important;
-    display: block !important;
-}
-[data-testid="stColumn"] {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-}
-[data-testid="stColumn"] > div {
-    width: 100% !important;
-}
 .player-pill {
     display: inline-block; background: #b85c38; color: #fff8f0;
     font-size: 12px; padding: 4px 14px; border-radius: 20px;
@@ -159,7 +135,11 @@ div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button {
     background: #3d2e18; border-radius: 16px;
     padding: 36px 32px; width: 100%; max-width: 420px;
 }
-
+.buzz-order-item {
+    font-size: 12px; color: #b8d4a8; padding: 4px 0;
+    border-bottom: 0.5px solid #4a3a28;
+}
+.buzz-order-first { color: #b85c38 !important; font-weight: 600; }
 @media (max-width: 768px) {
     .score-grid { grid-template-columns: repeat(2, 1fr) !important; }
     .board-wrap { padding: 12px !important; }
@@ -167,21 +147,6 @@ div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button {
     div[data-testid="stButton"] button { font-size: 13px !important; padding: 10px 0 !important; }
     [data-testid="stMainBlockContainer"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
     .question-text { font-size: 15px !important; }
-}
-    [data-testid="stColumn"] {
-    padding: 0 4px !important;
-    flex: 1 !important;
-    min-width: 0 !important;
-}
-[data-testid="stColumn"] > div:first-child {
-    width: 100% !important;
-}
-div[data-testid="stButton"] {
-    width: 100% !important;
-}
-div[data-testid="stButton"] > button {
-    width: 100% !important;
-    min-width: 0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -207,6 +172,17 @@ def get_spreadsheet():
 def get_sheet(tab_name):
     return get_spreadsheet().worksheet(tab_name)
 
+# ── Safe read with retry ───────────────────────────────────────────────────────
+def safe_read(func, retries=3, delay=2):
+    for attempt in range(retries):
+        try:
+            return func()
+        except Exception as e:
+            if "429" in str(e) and attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                return None
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=5)
 def get_players_cached():
@@ -214,7 +190,8 @@ def get_players_cached():
     return ws.get_all_records()
 
 def get_players():
-    return get_players_cached()
+    result = safe_read(get_players_cached)
+    return result if result is not None else []
 
 def add_or_get_player(name):
     ws = get_sheet("Players")
@@ -251,7 +228,11 @@ def read_game_state_cached():
                 "first_buzzer": "", "show_answer": "FALSE"}
 
 def read_game_state():
-    return read_game_state_cached()
+    result = safe_read(read_game_state_cached)
+    return result if result is not None else {
+        "active_question_id": "", "buzzer_locked": "FALSE",
+        "first_buzzer": "", "show_answer": "FALSE"
+    }
 
 def write_game_state(key, value):
     ws = get_sheet("GameState")
@@ -296,7 +277,8 @@ def get_questions_cached():
     return ws.get_all_records()
 
 def get_questions():
-    return get_questions_cached()
+    result = safe_read(get_questions_cached)
+    return result if result is not None else []
 
 def mark_question_used(question_id):
     ws = get_sheet("JeopardyContent")
@@ -306,6 +288,16 @@ def mark_question_used(question_id):
             ws.update_cell(i + 2, 6, "TRUE")
             break
     get_questions_cached.clear()
+
+def get_buzz_order(question_id):
+    try:
+        ws = get_sheet("BuzzerLog")
+        records = ws.get_all_records()
+        filtered = [r for r in records if str(r.get("question_id", "")) == str(question_id)]
+        filtered.sort(key=lambda x: x.get("timestamp", ""))
+        return filtered
+    except Exception:
+        return []
 
 # ── Session state ──────────────────────────────────────────────────────────────
 if "player_name" not in st.session_state:
@@ -350,7 +342,7 @@ for q in questions:
         categories[cat] = []
     categories[cat].append(q)
 
-# ── Host check ─────────────────────────────────────────────────────────────────
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### Host Controls")
     pw = st.text_input("Password", type="password", label_visibility="collapsed",
@@ -365,25 +357,49 @@ with st.sidebar:
         if st.button("Reset Buzzer", use_container_width=True):
             reset_buzzer()
             st.success("Buzzer reset!")
+
         st.divider()
         st.markdown("**Award / Deduct Points**")
         all_players_sidebar = get_players()
         if all_players_sidebar:
             selected_player = st.selectbox("Player", [p["name"] for p in all_players_sidebar])
             point_delta = st.number_input("Points", value=100, step=100)
-            if st.button("Apply Points", use_container_width=True):
-                update_score(selected_player, point_delta)
-                st.success(f"{point_delta:+d} pts → {selected_player}")
+        if st.button("Apply Points", use_container_width=True):
+            update_score(selected_player, point_delta)
+            st.success(f"{point_delta:+d} pts → {selected_player}")
+            st.rerun()
+
         st.divider()
         if st.button("Toggle Reveal Answer", use_container_width=True):
             state = read_game_state()
             write_game_state("show_answer",
                              "FALSE" if state["show_answer"] == "TRUE" else "TRUE")
+
         st.divider()
         if st.button("Clear Active Question", use_container_width=True):
             write_game_state("active_question_id", "")
             reset_buzzer()
             st.success("Question cleared!")
+
+        st.divider()
+        st.markdown("**Buzz Order**")
+        if st.button("Show Buzz Order", use_container_width=True):
+            state = read_game_state()
+            active_q = state["active_question_id"]
+            if active_q:
+                buzz_order = get_buzz_order(active_q)
+                if buzz_order:
+                    for i, entry in enumerate(buzz_order):
+                        css_class = "buzz-order-first" if entry.get("status") == "FIRST" else "buzz-order-item"
+                        st.markdown(
+                            f'<div class="{css_class}">{i+1}. {entry.get("player_name", "?")} — {entry.get("status", "")}</div>',
+                            unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='color:#b8d4a8;font-size:12px;'>No buzzes recorded yet</div>",
+                                unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='color:#b8d4a8;font-size:12px;'>No active question</div>",
+                            unsafe_allow_html=True)
     else:
         st.markdown("<div style='color:#b8d4a8;font-size:12px;'>Enter host password above</div>",
                     unsafe_allow_html=True)
@@ -398,22 +414,27 @@ with col_pill:
                 unsafe_allow_html=True)
 
 # ── Scoreboard ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-label">Scoreboard</div>', unsafe_allow_html=True)
-all_players = get_players()
-if all_players:
-    max_score = max(p["score"] for p in all_players)
-    cards_html = '<div class="score-grid">'
-    for p in all_players:
-        is_leader = p["score"] == max_score and max_score > 0
-        card_class = "score-card leader" if is_leader else "score-card"
-        leader_tag = '<span class="leader-tag">leader</span>' if is_leader else ""
-        cards_html += f"""
-        <div class="{card_class}">
-            <div class="score-name">{p['name']}{leader_tag}</div>
-            <div class="score-val">{p['score']} pts</div>
-        </div>"""
-    cards_html += "</div>"
-    st.markdown(cards_html, unsafe_allow_html=True)
+def scoreboard_display():
+    st.markdown('<div class="section-label">Scoreboard</div>', unsafe_allow_html=True)
+    all_players = get_players()
+    if all_players:
+        sorted_players = sorted(all_players, key=lambda x: x["score"], reverse=True)
+        top_players = sorted_players[:3]
+        max_score = top_players[0]["score"] if top_players else 0
+        cards_html = '<div class="score-grid">'
+        for p in top_players:
+            is_leader = p["score"] == max_score and max_score > 0
+            card_class = "score-card leader" if is_leader else "score-card"
+            leader_tag = '<span class="leader-tag">leader</span>' if is_leader else ""
+            cards_html += f"""
+            <div class="{card_class}">
+                <div class="score-name">{p['name']}{leader_tag}</div>
+                <div class="score-val">{p['score']} pts</div>
+            </div>"""
+        cards_html += "</div>"
+        st.markdown(cards_html, unsafe_allow_html=True)
+
+scoreboard_display()
 
 st.divider()
 
@@ -429,7 +450,6 @@ def buzzer_display():
     matching = [q for q in questions if str(q["id"]) == str(active_q)] if active_q else []
     current_q = matching[0] if matching else None
 
-    # Current question card
     if current_q:
         st.markdown(f"""
         <div class="question-card">
@@ -443,7 +463,6 @@ def buzzer_display():
             Waiting for host to select a question...
         </div>""", unsafe_allow_html=True)
 
-    # Answer banner
     if show_ans and current_q:
         st.markdown(f"""
         <div class="answer-banner">
@@ -453,7 +472,6 @@ def buzzer_display():
             </div>
         </div>""", unsafe_allow_html=True)
 
-    # Buzzer status — only show when a question is active
     if current_q:
         if locked and first:
             st.markdown(f"""
@@ -466,7 +484,6 @@ def buzzer_display():
                 Buzzer is open!
             </div>""", unsafe_allow_html=True)
 
-    # Buzz button — players only, not host
     if not is_host:
         if st.button("🔔  BUZZ IN", use_container_width=True):
             if not active_q:
@@ -496,7 +513,8 @@ if is_host:
             for q in sorted(categories[cat], key=lambda x: x["value"]):
                 used = str(q.get("used", "")).upper() == "TRUE"
                 if used:
-                    st.markdown('<div style="background:#d8e8d0;color:#8aaa80;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">✓</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="background:#d8e8d0;color:#8aaa80;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">✓</div>',
+                                unsafe_allow_html=True)
                 else:
                     if st.button(f"{q['value']} pts", key=f"q_{q['id']}", use_container_width=True):
                         write_game_state("active_question_id", str(q["id"]))
