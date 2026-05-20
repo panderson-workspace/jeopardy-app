@@ -485,17 +485,12 @@ def buzzer_display():
             </div>""", unsafe_allow_html=True)
 
     if not is_host:
-        if st.button("🔔  BUZZ IN", use_container_width=True):
-            if not active_q:
-                st.error("No active question yet — wait for the host.")
-            elif locked:
-                st.error("Too slow — someone already buzzed!")
+        if st.button("🔔  BUZZ IN", use_container_width=True, disabled=locked):
+            result = buzz_in(player_name, active_q)
+            if result:
+                st.success("You buzzed in first!")
             else:
-                result = buzz_in(player_name, active_q)
-                if result:
-                    st.success("You buzzed in first!")
-                else:
-                    st.error("Too slow — someone already buzzed!")
+                st.error("Oops — too slow!")
 
 buzzer_display()
 
