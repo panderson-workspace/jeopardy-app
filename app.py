@@ -183,6 +183,28 @@ def safe_read(func, retries=3, delay=2):
             else:
                 return None
 
+# ── SHARED RAM STATE (NEW) ─────────────────────────────────────────────────────
+@st.cache_resource
+def get_shared_state():
+    """Lives purely in server RAM. Shared globally by all 30+ players."""
+    # Bootstrap from Google Sheets once when the server wakes up
+    try:
+        ws = get_sheet("GameState")
+        vals = ws.batch_get(["B1", "B2", "B3", "B4"])
+        def safe(v, idx):
+            try: return v[idx][0][0]
+            except: return ""
+        return {
+            "active_question_id": safe(vals, 0),
+            "buzzer_locked": safe(vals, 1) if safe(vals, 1) else "FALSE",
+            "first_buzzer": safe(vals, 2),
+            "show_answer": safe(vals, 3) if safe(vals, 3) else "FALSE",
+            "score_version": 0
+        }
+    except Exception:
+        return {"active_question_id": "", "buzzer_locked": "FALSE",
+                "first_buzzer": "", "show_answer": "FALSE", "score_version": 0}
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=5)
 def get_players_cached():
@@ -201,75 +223,82 @@ def add_or_get_player(name):
     get_players_cached.clear()
 
 def update_score(name, delta):
+    # 1. Update the Permanent Record
     ws = get_sheet("Players")
     records = ws.get_all_records()
     for i, r in enumerate(records):
         if r["name"] == name:
             ws.update_cell(i + 2, 2, r["score"] + delta)
             break
+            
+    # 2. Update the RAM Tracker (forces players' screens to refresh)
+    shared = get_shared_state()
+    shared["score_version"] += 1
+    
     get_players_cached.clear()
 
-@st.cache_data(ttl=3)
-def read_game_state_cached():
-    try:
-        ws = get_sheet("GameState")
-        vals = ws.batch_get(["B1", "B2", "B3", "B4"])
-        def safe(v, idx):
-            try: return v[idx][0][0]
-            except: return ""
-        return {
-            "active_question_id": safe(vals, 0),
-            "buzzer_locked":      safe(vals, 1),
-            "first_buzzer":       safe(vals, 2),
-            "show_answer":        safe(vals, 3),
-        }
-    except Exception:
-        return {"active_question_id": "", "buzzer_locked": "FALSE",
-                "first_buzzer": "", "show_answer": "FALSE"}
-
 def read_game_state():
-    result = safe_read(read_game_state_cached)
-    return result if result is not None else {
-        "active_question_id": "", "buzzer_locked": "FALSE",
-        "first_buzzer": "", "show_answer": "FALSE"
-    }
+    # Instantly returns data from server memory (0 API Calls)
+    return get_shared_state()
 
 def write_game_state(key, value):
-    ws = get_sheet("GameState")
-    cell_map = {
-        "active_question_id": "B1", "buzzer_locked": "B2",
-        "first_buzzer": "B3", "show_answer": "B4",
-    }
-    ws.update_acell(cell_map[key], value)
-    read_game_state_cached.clear()
-
-def reset_buzzer():
-    ws = get_sheet("GameState")
-    ws.batch_update([
-        {"range": "B2", "values": [["FALSE"]]},
-        {"range": "B3", "values": [[""]]},
-        {"range": "B4", "values": [["FALSE"]]},
-    ])
-    read_game_state_cached.clear()
-
-def buzz_in(player_name, question_id):
+    # 1. Flash to server memory immediately
+    shared = get_shared_state()
+    shared[key] = value
+    
+    # 2. Push to Google Sheets in the background
     try:
         ws = get_sheet("GameState")
-        vals = ws.batch_get(["B2", "B3"])
-        locked = vals[0][0][0] if vals[0] else "FALSE"
-        log_ws = get_sheet("BuzzerLog")
-        if locked == "TRUE":
-            log_ws.append_row([time.strftime("%Y-%m-%d %H:%M:%S"), player_name, question_id, "LATE"])
-            return False
+        cell_map = {
+            "active_question_id": "B1", "buzzer_locked": "B2",
+            "first_buzzer": "B3", "show_answer": "B4",
+        }
+        if key in cell_map:
+            ws.update_acell(cell_map[key], value)
+    except Exception:
+        pass
+
+def reset_buzzer():
+    # 1. Unlock in memory immediately
+    shared = get_shared_state()
+    shared["buzzer_locked"] = "FALSE"
+    shared["first_buzzer"] = ""
+    shared["show_answer"] = "FALSE"
+    
+    # 2. Push to Google Sheets in the background
+    try:
+        ws = get_sheet("GameState")
+        ws.batch_update([
+            {"range": "B2", "values": [["FALSE"]]},
+            {"range": "B3", "values": [[""]]},
+            {"range": "B4", "values": [["FALSE"]]},
+        ])
+    except Exception:
+        pass
+
+def buzz_in(player_name, question_id):
+    shared = get_shared_state()
+    
+    # Check RAM instantly
+    if shared["buzzer_locked"] == "TRUE":
+        return False
+        
+    # Lock RAM instantly (prevents ties)
+    shared["buzzer_locked"] = "TRUE"
+    shared["first_buzzer"] = player_name
+    
+    # Write audit log to Sheets in the background
+    try:
+        ws = get_sheet("GameState")
         ws.batch_update([
             {"range": "B2", "values": [["TRUE"]]},
             {"range": "B3", "values": [[player_name]]},
         ])
+        log_ws = get_sheet("BuzzerLog")
         log_ws.append_row([time.strftime("%Y-%m-%d %H:%M:%S"), player_name, question_id, "FIRST"])
-        read_game_state_cached.clear()
-        return True
     except Exception:
-        return False
+        pass
+    return True
 
 @st.cache_data(ttl=300)
 def get_questions_cached():
@@ -304,6 +333,8 @@ if "player_name" not in st.session_state:
     st.session_state.player_name = None
 if "host_pw" not in st.session_state:
     st.session_state.host_pw = ""
+if "last_seen_score_version" not in st.session_state:
+    st.session_state.last_seen_score_version = 0
 
 # ── Lobby ──────────────────────────────────────────────────────────────────────
 if st.session_state.player_name is None:
@@ -441,7 +472,15 @@ st.divider()
 # ── Buzzer + question fragment ─────────────────────────────────────────────────
 @st.fragment(run_every=3)
 def buzzer_display():
-    state = read_game_state()
+    shared = get_shared_state()
+    
+    # If the Host updated a score, this triggers exactly once to refresh the UI
+    if shared["score_version"] != st.session_state.last_seen_score_version:
+        st.session_state.last_seen_score_version = shared["score_version"]
+        get_players_cached.clear()
+        st.rerun()
+
+    state = shared
     first = state["first_buzzer"]
     locked = state["buzzer_locked"] == "TRUE"
     show_ans = state["show_answer"] == "TRUE"
