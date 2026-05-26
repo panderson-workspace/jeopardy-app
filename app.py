@@ -183,7 +183,7 @@ def safe_read(func, retries=3, delay=2):
             else:
                 return None
 
-# ── SHARED RAM STATE (NEW) ─────────────────────────────────────────────────────
+# ── SHARED RAM STATE ─────────────────────────────────────────────────────
 @st.cache_resource
 def get_shared_state():
     """Lives purely in server RAM. Shared globally by all 30+ players."""
@@ -533,25 +533,28 @@ def buzzer_display():
 
 buzzer_display()
 
-# ── Game board — HOST ONLY ─────────────────────────────────────────────────────
-if is_host:
-    st.divider()
-    st.markdown('<div class="board-label">GAME BOARD</div>', unsafe_allow_html=True)
+# ── Game board — ALL USERS ────────────────────────────────────────────────────
+st.divider()
+st.markdown('<div class="board-label">GAME BOARD</div>', unsafe_allow_html=True)
 
-    cat_names = list(categories.keys())
-    board_cols = st.columns(len(cat_names))
+cat_names = list(categories.keys())
+board_cols = st.columns(len(cat_names))
 
-    for col_idx, cat in enumerate(cat_names):
-        with board_cols[col_idx]:
-            st.markdown(f'<div class="cat-header">{cat}</div>', unsafe_allow_html=True)
-            for q in sorted(categories[cat], key=lambda x: x["value"]):
-                used = str(q.get("used", "")).upper() == "TRUE"
-                if used:
-                    st.markdown('<div style="background:#d8e8d0;color:#8aaa80;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">✓</div>',
-                                unsafe_allow_html=True)
-                else:
+for col_idx, cat in enumerate(cat_names):
+    with board_cols[col_idx]:
+        st.markdown(f'<div class="cat-header">{cat}</div>', unsafe_allow_html=True)
+        for q in sorted(categories[cat], key=lambda x: x["value"]):
+            used = str(q.get("used", "")).upper() == "TRUE"
+            if used:
+                st.markdown('<div style="background:#d8e8d0;color:#8aaa80;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">✓</div>',
+                            unsafe_allow_html=True)
+            else:
+                if is_host:
                     if st.button(f"{q['value']} pts", key=f"q_{q['id']}", use_container_width=True):
                         write_game_state("active_question_id", str(q["id"]))
                         reset_buzzer()
                         mark_question_used(q["id"])
                         st.rerun()
+                else:
+                    st.markdown(f'<div style="background:#b8d4a8;color:#241a10;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">{q["value"]} pts</div>',
+                                unsafe_allow_html=True)
