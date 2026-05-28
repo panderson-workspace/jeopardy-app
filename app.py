@@ -199,11 +199,12 @@ def get_shared_state():
             "buzzer_locked": safe(vals, 1) if safe(vals, 1) else "FALSE",
             "first_buzzer": safe(vals, 2),
             "show_answer": safe(vals, 3) if safe(vals, 3) else "FALSE",
-            "score_version": 0
+            "score_version": 0,
+            "board_version": 0 # Added to track board state
         }
     except Exception:
         return {"active_question_id": "", "buzzer_locked": "FALSE",
-                "first_buzzer": "", "show_answer": "FALSE", "score_version": 0}
+                "first_buzzer": "", "show_answer": "FALSE", "score_version": 0, "board_version": 0}
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=5)
@@ -223,7 +224,6 @@ def add_or_get_player(name):
     get_players_cached.clear()
 
 def update_score(name, delta):
-    # 1. Update the Permanent Record
     ws = get_sheet("Players")
     records = ws.get_all_records()
     for i, r in enumerate(records):
@@ -231,22 +231,16 @@ def update_score(name, delta):
             ws.update_cell(i + 2, 2, r["score"] + delta)
             break
             
-    # 2. Update the RAM Tracker (forces players' screens to refresh)
     shared = get_shared_state()
     shared["score_version"] += 1
-    
     get_players_cached.clear()
 
 def read_game_state():
-    # Instantly returns data from server memory (0 API Calls)
     return get_shared_state()
 
 def write_game_state(key, value):
-    # 1. Flash to server memory immediately
     shared = get_shared_state()
     shared[key] = value
-    
-    # 2. Push to Google Sheets in the background
     try:
         ws = get_sheet("GameState")
         cell_map = {
@@ -259,13 +253,10 @@ def write_game_state(key, value):
         pass
 
 def reset_buzzer():
-    # 1. Unlock in memory immediately
     shared = get_shared_state()
     shared["buzzer_locked"] = "FALSE"
     shared["first_buzzer"] = ""
     shared["show_answer"] = "FALSE"
-    
-    # 2. Push to Google Sheets in the background
     try:
         ws = get_sheet("GameState")
         ws.batch_update([
@@ -278,16 +269,12 @@ def reset_buzzer():
 
 def buzz_in(player_name, question_id):
     shared = get_shared_state()
-    
-    # Check RAM instantly
     if shared["buzzer_locked"] == "TRUE":
         return False
         
-    # Lock RAM instantly (prevents ties)
     shared["buzzer_locked"] = "TRUE"
     shared["first_buzzer"] = player_name
     
-    # Write audit log to Sheets in the background
     try:
         ws = get_sheet("GameState")
         ws.batch_update([
@@ -335,6 +322,8 @@ if "host_pw" not in st.session_state:
     st.session_state.host_pw = ""
 if "last_seen_score_version" not in st.session_state:
     st.session_state.last_seen_score_version = 0
+if "last_seen_board_version" not in st.session_state:
+    st.session_state.last_seen_board_version = 0
 
 # ── Lobby ──────────────────────────────────────────────────────────────────────
 if st.session_state.player_name is None:
@@ -473,11 +462,21 @@ st.divider()
 @st.fragment(run_every=3)
 def buzzer_display():
     shared = get_shared_state()
+    needs_rerun = False
     
-    # If the Host updated a score, this triggers exactly once to refresh the UI
+    # Trigger full rerun if host updated scores
     if shared["score_version"] != st.session_state.last_seen_score_version:
         st.session_state.last_seen_score_version = shared["score_version"]
         get_players_cached.clear()
+        needs_rerun = True
+        
+    # Trigger full rerun if host marked a question as done
+    if shared.get("board_version", 0) != st.session_state.last_seen_board_version:
+        st.session_state.last_seen_board_version = shared.get("board_version", 0)
+        get_questions_cached.clear()
+        needs_rerun = True
+
+    if needs_rerun:
         st.rerun()
 
     state = shared
@@ -545,16 +544,23 @@ for col_idx, cat in enumerate(cat_names):
         st.markdown(f'<div class="cat-header">{cat}</div>', unsafe_allow_html=True)
         for q in sorted(categories[cat], key=lambda x: x["value"]):
             used = str(q.get("used", "")).upper() == "TRUE"
+            
             if used:
-                st.markdown('<div style="background:#d8e8d0;color:#8aaa80;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">✓</div>',
-                            unsafe_allow_html=True)
+                # Disabled Streamlit buttons hook directly into your green/grey done CSS!
+                st.button("✓", key=f"used_{q['id']}", use_container_width=True, disabled=True)
             else:
                 if is_host:
                     if st.button(f"{q['value']} pts", key=f"q_{q['id']}", use_container_width=True):
                         write_game_state("active_question_id", str(q["id"]))
                         reset_buzzer()
                         mark_question_used(q["id"])
+                        
+                        # Increment board version to push the full UI update to participants
+                        shared = get_shared_state()
+                        shared["board_version"] = shared.get("board_version", 0) + 1
+                        
                         st.rerun()
                 else:
-                    st.markdown(f'<div style="background:#b8d4a8;color:#241a10;border-radius:8px;padding:18px 0;text-align:center;font-size:16px;font-weight:700;margin-bottom:6px;width:100%;">{q["value"]} pts</div>',
-                                unsafe_allow_html=True)
+                    # Give participants the EXACT same real button to guarantee perfectly identical rendering
+                    if st.button(f"{q['value']} pts", key=f"q_{q['id']}_p", use_container_width=True):
+                        pass # Clicking it will softly reload the screen but perform no back-end logic
